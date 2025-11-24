@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港交通大冒險：最終試煉 (難度升級版)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-storm: url('https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?q=80&w=1920&auto=format&fit=crop');
+            --hp-green: #4caf50;
+            --hp-yellow: #ffeb3b;
+            --hp-red: #f44336;
+            --ui-border: #333;
+            --ui-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            margin: 0;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-boy {
+            width: 100%;
+            max-width: 680px;
+            height: 100vh;
+            max-height: 900px;
+            background: #000;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 4px solid #333;
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            flex-direction: column;
+        }
+        .screen.active { display: flex; }
+
+        /* START SCREEN */
+        #start-screen {
+            background: linear-gradient(135deg, #2c3e50, #000000);
+            color: white;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        #start-screen h1 { 
+            font-family: 'Press Start 2P', cursive; 
+            font-size: 28px; 
+            line-height: 1.6; 
+            color: #f1c40f;
+            text-shadow: 4px 4px #c0392b;
+        }
+        .btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #e74c3c;
+            color: white;
+            border: 4px solid #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            box-shadow: 0 5px #992d22;
+            transition: 0.1s;
+            margin-top: 20px;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 1px #992d22; }
+
+        /* SELECTION SCREEN */
+        #selection-screen {
+            background: #74b9ff;
+            padding: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+        #selection-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+        }
+        .starter-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: 4px solid transparent;
+            transition: 0.3s;
+            flex: 1;
+            max-width: 150px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .starter-card:hover { border-color: #e74c3c; transform: scale(1.1); z-index: 10; }
+        .starter-card img { width: 80px; height: 80px; object-fit: contain; }
+        .starter-name { font-weight: 900; margin-top: 10px; color: #333; }
+
+        /* BATTLE SCREEN */
+        #battle-screen {
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.5s;
+        }
+
+        /* TOP BAR UI */
+        #top-bar {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            gap: 20px;
+        }
+        #timer-display {
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Press Start 2P';
+            font-size: 14px;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        #timer-display.urgent {
+            color: #ff0000;
+            box-shadow: 0 0 15px #ff0000;
+            animation: pulse 1s infinite;
+        }
+        #progress-display {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            border: 2px solid #333;
+            font-size: 14px;
+        }
+
+        @keyframes pulse { 0% {opacity:1;} 50% {opacity:0.5;} 100% {opacity:1;} }
+
+        .battle-scene {
+            flex: 6; 
+            position: relative;
+            width: 100%;
+        }
+
+        .pokemon {
+            position: absolute;
+            image-rendering: pixelated;
+            filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.5));
+        }
+        .pokemon img { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* ENEMY GROUP (Top Right) */
+        #enemy-mon { top: 15%; right: 2%; width: 35%; height: 35%; z-index: 1; }
+        #enemy-hud { top: 18%; right: 40%; border-radius: 10px; }
+
+        /* PLAYER GROUP (Bottom Left) */
+        #player-mon { bottom: 2%; left: 2%; width: 35%; height: 35%; z-index: 2; }
+        #player-hud { bottom: 15%; left: 40%; border-radius: 10px; }
+
+        /* HUD STYLE */
+        .hud {
+            position: absolute;
+            background: var(--ui-bg);
+            padding: 8px 10px;
+            border: 3px solid var(--ui-border);
+            width: 160px;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: bold;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .hud-name { font-size: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .hp-bar-container {
+            width: 100%; height: 12px; background: #ddd;
+            border-radius: 10px; border: 1px solid #666; overflow: hidden;
+        }
+        .hp-bar { height: 100%; width: 100%; background: var(--hp-green); transition: width 0.5s; }
+        .hp-text { font-size: 10px; text-align: right; margin-top: 2px; font-family: 'Press Start 2P'; }
+
+        /* DIALOGUE */
+        .dialogue-box {
+            flex: 4;
+            background: #2d3436;
+            border-top: 5px solid #f1c40f;
+            padding: 15px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        #text-display {
+            font-size: 16px; margin-bottom: 10px; line-height: 1.4; min-height: 45px;
+            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;
+        }
+        #options-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 100%; }
+        .option-btn {
+            background: #fff; border: 3px solid #b2bec3; border-radius: 8px;
+            padding: 8px; color: #2d3436; font-size: 14px; font-weight: bold;
+            cursor: pointer; text-align: left; display: flex; align-items: center;
+        }
+        .option-btn:hover { background: #ffeaa7; border-color: #e17055; }
+
+        /* RESULT SCREEN */
+        #result-screen {
+            background: linear-gradient(to bottom, #1e272e, #485460);
+            color: white;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .result-card {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            border: 5px solid #f1c40f;
+        }
+        .grade-text {
+            font-family: 'Press Start 2P';
+            font-size: 50px;
+            margin: 10px 0;
+            display: block;
+        }
+        .score-text {
+            font-size: 24px;
+            color: #2980b9;
+            font-weight: bold;
+            margin: 15px 0;
+            display: block;
+        }
+        .grade-S { color: #f1c40f; text-shadow: 3px 3px 0 #000; }
+        .grade-A { color: #e74c3c; }
+        .grade-B { color: #3498db; }
+        .grade-C { color: #95a5a6; }
+
+        /* ANIMATIONS */
+        @keyframes bossFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .boss-anim { animation: bossFloat 3s infinite ease-in-out; }
+        @keyframes shakeRed { 0% { transform: translate(0,0); } 20% { transform: translate(-10px,10px); filter: brightness(2) sepia(1) hue-rotate(-50deg) saturate(5); } 100% { transform: translate(0,0); filter: none;} }
+        .damaged { animation: shakeRed 0.5s; }
+        @keyframes attackDash { 0% { transform: scale(1); } 50% { transform: scale(1.2) translate(30px, -30px); } 100% { transform: scale(1); } }
+        .attacking { animation: attackDash 0.3s; }
+
+        /* PARTICLES */
+        .particle { position: absolute; width: 30px; height: 30px; border-radius: 50%; z-index: 10; pointer-events: none; }
+        @keyframes shootFire { 0% { bottom: 20%; left: 20%; opacity: 1; } 100% { bottom: 70%; left: 75%; opacity: 0; transform: scale(3); background: #e74c3c;} }
+
+        .loading-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.9); color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 999; display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-boy">
+    
+    <div id="loading" class="loading-overlay">
+        <p>載入中...</p>
+    </div>
+
+    <div id="start-screen" class="screen active">
+        <h1>香港交通<br>終極試煉</h1>
+        <p>完成 12 條問題<br>限時 5 分鐘</p>
+        <button class="btn" onclick="startGame()">挑戰開始</button>
+    </div>
+
+    <div id="selection-screen" class="screen">
+        <h2 style="font-family: 'Press Start 2P'; color: #2d3436;">選擇戰友!</h2>
+        <div id="selection-container"></div>
+    </div>
+
+    <div id="battle-screen" class="screen">
+        <div id="top-bar">
+            <div id="timer-display">05:00</div>
+            <div id="progress-display">進度: 1 / 12</div>
+        </div>
+        
+        <div class="battle-scene">
+            <div id="enemy-hud" class="hud">
+                <div class="hud-name"><span id="enemy-name">BOSS</span> <span>Lv.99</span></div>
+                <div class="hp-bar-container"><div id="enemy-hp-bar" class="hp-bar"></div></div>
+                <div id="enemy-hp-text" class="hp-text">100%</div>
+            </div>
+            <div id="enemy-mon" class="pokemon boss-anim"><img id="enemy-img" src="" alt="Boss"></div>
+
+            <div id="player-mon" class="pokemon"><img id="player-img" src="" alt="Player"></div>
+            <div id="player-hud" class="hud">
+                <div class="hud-name"><span id="player-name">YOU</span> <span>Lv.50</span></div>
+                <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar"></div></div>
+                <div id="player-hp-text" class="hp-text">100%</div>
+            </div>
+        </div>
+
+        <div class="dialogue-box">
+            <div id="text-display">戰鬥開始！</div>
+            <div id="options-container"></div>
+        </div>
+    </div>
+
+    <div id="result-screen" class="screen">
+        <div class="result-card">
+            <h2 id="result-title">挑戰成功!</h2>
+            <p>通關時間: <span id="result-time" style="font-weight:bold; font-size:20px;">--:--</span></p>
+            
+            <span id="result-score-display" class="score-text">答對題數: 12 / 12</span>
+            
+            <p>成績評級</p>
+            <span id="result-grade" class="grade-text grade-S">S</span>
+            <p id="result-comment">太神了！</p>
+            <button class="btn" onclick="location.reload()">再次挑戰</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- DATA: 12 QUESTIONS (UPDATED OPTIONS) ---
+    const rawQuestions = [
+        { q: "哪一種交通工具行駛時會發出「叮叮」的聲音？", options: ["電車", "小巴", "地鐵", "渡輪"], ans: 0 },
+        { q: "新界區的的士是什麼顏色的？", options: ["紅色", "藍色", "綠色", "黃色"], ans: 2 },
+        { q: "大嶼山的的士是什麼顏色的？", options: ["紅色", "綠色", "藍色", "黑色"], ans: 2 },
+        { q: "如果要從尖沙咀過海去中環，最便宜又可看風景的是？", options: ["港鐵", "天星小輪", "直升機", "的士"], ans: 1 },
+        { q: "哪種交通工具主要在地下行駛，速度最快？", options: ["巴士", "港鐵", "小巴", "纜車"], ans: 1 },
+        { q: "紅磡海底隧道連接哪兩個地方？", options: ["大嶼山和九龍", "香港島和九龍", "新界和深圳", "長洲和梅窩"], ans: 1 },
+        // UPDATED QUESTION: Harder options for Minibus seats
+        { q: "綠色專線小巴通常有多少個座位？", options: ["14座", "18座", "19座", "21座"], ans: 2 }, 
+        { q: "山頂纜車最主要帶遊客去哪裡？", options: ["迪士尼", "太平山頂", "海洋公園", "機場"], ans: 1 },
+        { q: "主要行駛於屯門和元朗區的路面有軌交通是？", options: ["輕鐵", "電車", "纜車", "磁浮列車"], ans: 0 },
+        { q: "香港的紅色的士可以在哪裡行駛？", options: ["只限香港島", "只限九龍", "大部份地區 (除大嶼山南部)", "只限機場"], ans: 2 },
+        { q: "乘搭小巴時，如果座位上有安全帶，我們應該怎樣做？", options: ["不用理會", "用來玩耍", "立即扣上安全帶", "剪斷它"], ans: 2 },
+        { q: "香港國際機場位於哪一個島嶼？", options: ["香港島", "長洲", "南丫島", "赤鱲角"], ans: 3 }
+    ];
+
+    // --- STATE ---
+    let questions = []; // To be shuffled
+    let currentQIndex = 0;
+    const TOTAL_QUESTIONS = 12;
+
+    let playerStats = { name: "", imgBack: "", hp: 100, maxHp: 100 };
+    let enemyStats = { name: "列空座", imgFront: "", hp: 12, maxHp: 12 };
+    
+    // Timer
+    let timerInterval;
+    const MAX_TIME = 300; // 5 Minutes
+    let remainingTime = MAX_TIME;
+
+    // DOM
+    const screens = {
+        start: document.getElementById('start-screen'),
+        select: document.getElementById('selection-screen'),
+        battle: document.getElementById('battle-screen'),
+        result: document.getElementById('result-screen')
+    };
+    const timerDisplay = document.getElementById('timer-display');
+    const progressDisplay = document.getElementById('progress-display');
+
+    // --- FUNCTIONS ---
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function showScreen(name) {
+        Object.values(screens).forEach(s => s.classList.remove('active'));
+        screens[name].classList.add('active');
+    }
+
+    async function fetchPokemonData(id) {
+        try {
+            const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+            const data = await res.json();
+            return {
+                imgFront: data.sprites.other.showdown.front_default,
+                imgBack: data.sprites.other.showdown.back_default
+            };
+        } catch (e) {
+            console.error("API Error", e);
+            return { imgFront: "", imgBack: "" };
+        }
+    }
+
+    async function startGame() {
+        document.getElementById('loading').style.display = 'flex';
+        
+        // Shuffle Questions
+        questions = shuffleArray([...rawQuestions]);
+        currentQIndex = 0;
+
+        // Charizard (6), Bulbasaur (1), Blastoise (9)
+        const coolStarters = [6, 1, 9]; 
+        const starterNames = ["噴火龍", "奇妙種子", "水箭龜"];
+        const container = document.getElementById('selection-container');
+        container.innerHTML = '';
+
+        try {
+            const pokemonData = await Promise.all(coolStarters.map(id => fetchPokemonData(id)));
+            pokemonData.forEach((p, idx) => {
+                const card = document.createElement('div');
+                card.className = 'starter-card';
+                card.innerHTML = `<img src="${p.imgFront}"><div class="starter-name">${starterNames[idx]}</div>`;
+                card.onclick = () => selectStarter(p, starterNames[idx]);
+                container.appendChild(card);
+            });
+            document.getElementById('loading').style.display = 'none';
+            showScreen('select');
+        } catch(e) { alert("網絡錯誤，請檢查連線"); }
+    }
+
+    async function selectStarter(data, name) {
+        playerStats = { ...playerStats, name: name, imgBack: data.imgBack, hp: 100 };
+        
+        document.getElementById('loading').style.display = 'flex';
+        try {
+            const bossData = await fetchPokemonData(384); // Rayquaza
+            enemyStats = { ...enemyStats, imgFront: bossData.imgFront, hp: 12 };
+            initBattle();
+        } catch(e) { console.error(e); }
+    }
+
+    function initBattle() {
+        document.getElementById('loading').style.display = 'none';
+        showScreen('battle');
+        document.getElementById('battle-screen').style.backgroundImage = 'var(--bg-storm)';
+
+        document.getElementById('player-img').src = playerStats.imgBack;
+        document.getElementById('enemy-img').src = enemyStats.imgFront;
+        document.getElementById('player-name').innerText = playerStats.name;
+        document.getElementById('enemy-name').innerText = "天空魔王";
+
+        updateUI();
+        startTimer();
+        
+        document.getElementById('text-display').innerText = `魔王出現了！\n你必須完成所有 ${TOTAL_QUESTIONS} 條題目！`;
+        setTimeout(nextTurn, 2000);
+    }
+
+    function startTimer() {
+        remainingTime = MAX_TIME;
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+            remainingTime--;
+            updateTimerDisplay();
+            if (remainingTime <= 0) {
+                clearInterval(timerInterval);
+                gameOver(false, "timeout");
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const m = Math.floor(remainingTime / 60);
+        const s = remainingTime % 60;
+        timerDisplay.innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+        if (remainingTime <= 60) timerDisplay.classList.add('urgent');
+        else timerDisplay.classList.remove('urgent');
+    }
+
+    function updateUI() {
+        // Update Progress
+        progressDisplay.innerText = `進度: ${Math.min(currentQIndex + 1, TOTAL_QUESTIONS)} / ${TOTAL_QUESTIONS}`;
+
+        // Player HP
+        const pPct = (playerStats.hp / playerStats.maxHp) * 100;
+        const pBar = document.getElementById('player-hp-bar');
+        pBar.style.width = `${Math.max(0, pPct)}%`;
+        pBar.style.backgroundColor = pPct > 50 ? 'var(--hp-green)' : (pPct > 20 ? 'var(--hp-yellow)' : 'var(--hp-red)');
+        document.getElementById('player-hp-text').innerText = `${Math.max(0, playerStats.hp)}%`;
+
+        // Enemy HP (Based on Remaining Questions)
+        const ePct = (enemyStats.hp / enemyStats.maxHp) * 100;
+        const eBar = document.getElementById('enemy-hp-bar');
+        eBar.style.width = `${Math.max(0, ePct)}%`;
+        eBar.style.backgroundColor = ePct > 50 ? 'var(--hp-green)' : (ePct > 20 ? 'var(--hp-yellow)' : 'var(--hp-red)');
+        document.getElementById('enemy-hp-text').innerText = `${Math.floor(ePct)}%`;
+    }
+
+    function nextTurn() {
+        if (playerStats.hp <= 0) return gameOver(false, "dead");
+        
+        // WIN CONDITION: Finished all questions
+        if (currentQIndex >= TOTAL_QUESTIONS) {
+            return gameOver(true);
+        }
+
+        const q = questions[currentQIndex];
+        document.getElementById('text-display').innerText = q.q;
+        
+        const opts = document.getElementById('options-container');
+        opts.innerHTML = '';
+        q.options.forEach((o, i) => {
+            const b = document.createElement('button');
+            b.className = 'option-btn';
+            b.innerText = o;
+            b.onclick = () => handleAns(i === q.ans);
+            opts.appendChild(b);
+        });
+    }
+
+    function handleAns(isCorrect) {
+        const opts = document.getElementById('options-container');
+        opts.innerHTML = ''; // Lock buttons
+        const txt = document.getElementById('text-display');
+
+        if (isCorrect) {
+            txt.innerText = "正確！發動攻擊！";
+            playAnim('player', 'attacking');
+            createParticle();
+            
+            setTimeout(() => {
+                enemyStats.hp -= 1; // 1 Damage per question
+                playAnim('enemy', 'damaged');
+                
+                currentQIndex++; // Move to next question
+                updateUI();
+
+                setTimeout(() => {
+                    nextTurn();
+                }, 1000);
+            }, 500);
+
+        } else {
+            txt.innerText = "答錯了... 受到反擊！";
+            playAnim('enemy', 'attacking');
+            
+            setTimeout(() => {
+                playerStats.hp -= 25; // 4 Mistakes = Game Over
+                playAnim('player', 'damaged');
+                
+                updateUI();
+                if (playerStats.hp > 0) {
+                    setTimeout(() => {
+                        txt.innerText = "再試一次！";
+                        renderSameOptions(); 
+                    }, 1000);
+                } else {
+                    setTimeout(nextTurn, 1000); // Will trigger game over
+                }
+            }, 500);
+        }
+    }
+
+    function renderSameOptions() {
+        const q = questions[currentQIndex];
+        const opts = document.getElementById('options-container');
+        opts.innerHTML = '';
+        q.options.forEach((o, i) => {
+            const b = document.createElement('button');
+            b.className = 'option-btn';
+            b.innerText = o;
+            b.onclick = () => handleAns(i === q.ans);
+            opts.appendChild(b);
+        });
+    }
+
+    function playAnim(who, type) {
+        const el = document.getElementById(`${who}-mon`);
+        el.classList.add(type);
+        setTimeout(() => el.classList.remove(type), 500);
+    }
+
+    function createParticle() {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.background = 'radial-gradient(circle, #fff, #3498db)';
+        p.style.boxShadow = '0 0 15px #3498db';
+        p.style.bottom = '20%'; p.style.left = '20%';
+        p.style.animation = 'shootFire 0.5s forwards';
+        document.querySelector('.battle-scene').appendChild(p);
+        setTimeout(() => p.remove(), 500);
+    }
+
+    function gameOver(win, reason) {
+        clearInterval(timerInterval);
+        
+        setTimeout(() => {
+            showScreen('result');
+            const title = document.getElementById('result-title');
+            const timeText = document.getElementById('result-time');
+            const scoreDisplay = document.getElementById('result-score-display');
+            const gradeText = document.getElementById('result-grade');
+            const comment = document.getElementById('result-comment');
+
+            const timeUsed = MAX_TIME - remainingTime;
+            const m = Math.floor(timeUsed / 60);
+            const s = timeUsed % 60;
+            timeText.innerText = `${m}分 ${s}秒`;
+            
+            // Show Score (Score is essentially the currentQIndex)
+            scoreDisplay.innerText = `答對題數: ${currentQIndex} / ${TOTAL_QUESTIONS}`;
+
+            if (win) {
+                title.innerText = "任務完成！";
+                title.style.color = "#f1c40f";
+                
+                // Grading Logic based on 300s (5 mins)
+                gradeText.className = "grade-text";
+                if (remainingTime >= 150) { // > 2.5 mins left
+                    gradeText.innerText = "S";
+                    gradeText.classList.add("grade-S");
+                    comment.innerText = "無敵的交通大師！";
+                } else if (remainingTime >= 90) {
+                    gradeText.innerText = "A";
+                    gradeText.classList.add("grade-A");
+                    comment.innerText = "成績非常優秀！";
+                } else {
+                    gradeText.innerText = "B";
+                    gradeText.classList.add("grade-B");
+                    comment.innerText = "成功拯救了香港！";
+                }
+
+            } else {
+                title.innerText = reason === "timeout" ? "時間到！" : "挑戰失敗";
+                title.style.color = "#e74c3c";
+                gradeText.innerText = "F";
+                gradeText.className = "grade-text grade-C"; 
+                comment.innerText = reason === "timeout" ? "時間不夠了..." : "你的生命值歸零了...";
+            }
+        }, 1000);
+    }
+
+</script>
+
+</body>
+</html>
