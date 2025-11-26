@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常識科 RPG：能源守護者 Z (最終版)</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+    /* === 核心樣式 === */
+    :root {
+        --hp-green: #2ecc71;
+        --hp-yellow: #f1c40f;
+        --hp-red: #e74c3c;
+        --bg-boss: radial-gradient(circle, #202020 20%, #000 90%);
+        --timer-blue: #3498db;
+    }
+
+    body {
+        margin: 0;
+        background-color: #121212;
+        font-family: 'Press Start 2P', cursive;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+        user-select: none;
+    }
+
+    #game-console {
+        width: 800px;
+        height: 600px;
+        background-color: #222;
+        border: 12px solid #444;
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 60px rgba(0,255,255,0.1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* === 畫面管理 === */
+    .screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        background-color: #333;
+        transition: opacity 0.3s;
+    }
+    .screen.active { display: flex; }
+
+    /* === 開始畫面 === */
+    #start-screen { 
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); 
+        text-align: center; 
+    }
+    h1 { 
+        color: #fff; 
+        text-shadow: 5px 5px #000; 
+        font-size: 32px; 
+        line-height: 1.6; 
+        margin-bottom: 40px;
+    }
+    .hero-select { display: flex; gap: 30px; }
+    .hero-card {
+        background: rgba(0,0,0,0.5);
+        padding: 20px;
+        border-radius: 15px;
+        cursor: pointer;
+        border: 4px solid transparent;
+        transition: transform 0.2s;
+        text-align: center;
+        width: 140px;
+    }
+    .hero-card:hover { transform: scale(1.05); background: rgba(255,255,255,0.1); }
+    .hero-card.selected { border-color: #f1c40f; box-shadow: 0 0 20px #f1c40f; background: rgba(241, 196, 15, 0.1); }
+    .hero-img { width: 100px; height: 100px; object-fit: contain; image-rendering: pixelated; margin-bottom: 10px; }
+    .hero-card p { font-size: 14px; margin-top: 10px; }
+
+    .btn-main {
+        margin-top: 40px;
+        padding: 20px 40px;
+        font-family: inherit;
+        font-size: 20px;
+        background: #e74c3c;
+        color: white;
+        border: 4px solid #c0392b;
+        cursor: pointer;
+        box-shadow: 0 6px #922b21;
+        border-radius: 10px;
+    }
+    .btn-main:active { transform: translateY(4px); box-shadow: 0 2px #922b21; }
+    .btn-main:disabled { background: #555; border-color: #333; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
+
+    /* === 戰鬥畫面 === */
+    #battle-screen { 
+        justify-content: space-between; 
+        background: var(--bg-boss);
+    }
+
+    .top-hud {
+        position: absolute; top: 15px; width: 100%;
+        display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 20;
+    }
+    .timer-box {
+        background: rgba(0,0,0,0.7); border: 3px solid #fff; padding: 10px 20px; border-radius: 20px;
+        font-size: 16px; color: #fff; font-weight: bold;
+    }
+    .q-timer-bar-container {
+        position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+        width: 70%; height: 12px; background: #555; border: 3px solid #fff; border-radius: 10px; overflow: hidden;
+    }
+    .q-timer-bar { height: 100%; width: 100%; background: var(--timer-blue); transition: width 1s linear; }
+
+    .battle-field { position: relative; width: 100%; height: 55%; }
+    .boss-aura {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: repeating-linear-gradient(transparent, transparent 50px, rgba(0,255,255,0.05) 50px, rgba(0,255,255,0.05) 51px);
+        animation: scan 5s linear infinite; pointer-events: none;
+    }
+    @keyframes scan { from { background-position: 0 0; } to { background-position: 0 100px; } }
+
+    .sprite-container { position: absolute; }
+    .boss-pos { top: 60px; right: 50px; text-align: right; }
+    .hero-pos { bottom: 10px; left: 50px; text-align: left; }
+
+    .sprite { width: 160px; height: 160px; image-rendering: pixelated; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+    .boss-sprite { width: 240px; height: 240px; animation: float 3s infinite ease-in-out; filter: drop-shadow(0 0 20px rgba(0, 195, 255, 0.6)); }
+
+    .status-panel {
+        background: rgba(0,0,0,0.8); border: 3px solid #fff; border-radius: 8px; padding: 8px 12px;
+        width: 220px; margin-bottom: 5px; color: #fff; text-shadow: 2px 2px #000; font-size: 14px; position: relative; z-index: 5;
+    }
+    .boss-panel { width: 320px; border-color: #e74c3c; }
+    
+    /* 6px 極細血條 */
+    .hp-track { 
+        width: 100%; 
+        height: 6px; 
+        background: #333; 
+        border: 1px solid #555; 
+        border-radius: 4px; 
+        margin-top: 8px; 
+        overflow: hidden; 
+    }
+    .hp-fill { height: 100%; width: 100%; background: var(--hp-green); transition: width 0.4s ease-out, background 0.3s; }
+
+    .battle-ui {
+        width: 100%; height: 45%;
+        background: #2c3e50;
+        border-top: 6px solid #f39c12;
+        display: flex; padding: 20px;
+        box-sizing: border-box; gap: 20px;
+    }
+    .dialogue-area {
+        flex: 1.2;
+        background: #34495e;
+        border: 4px solid #7f8c8d;
+        border-radius: 8px;
+        padding: 20px;
+        font-size: 20px;
+        line-height: 1.6;
+        display: flex; flex-direction: column; justify-content: center;
+        color: #fff;
+    }
+    .choices-area { flex: 1.8; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .choice-btn {
+        background: #ecf0f1; color: #2c3e50;
+        border: 4px solid #bdc3c7; border-radius: 8px;
+        font-size: 16px; cursor: pointer;
+        font-family: inherit; transition: 0.1s; padding: 5px; line-height: 1.4;
+    }
+    .choice-btn:hover { background: #fff; border-color: #3498db; }
+    .choice-btn:active { background: #bdc3c7; transform: translateY(2px); }
+    .choice-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* 招式按鈕特別樣式 */
+    .move-btn {
+        background: #2c3e50; color: #f1c40f; border-color: #f1c40f; font-weight: bold;
+    }
+    .move-btn:hover { background: #34495e; color: #fff; border-color: #fff; }
+
+    .grade-big { font-size: 100px; font-weight: bold; margin: 20px 0; text-shadow: 6px 6px 0px #000; }
+    .grade-S { color: #f1c40f; } .grade-A { color: #e74c3c; } .grade-B { color: #3498db; } .grade-C { color: #95a5a6; }
+    #end-content { font-size: 20px; line-height: 1.8; }
+
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    .anim-hero-attack { animation: lungeRight 0.3s forwards; }
+    @keyframes lungeRight { 0% { transform: translateX(0); } 50% { transform: translateX(80px); } 100% { transform: translateX(0); } }
+    .anim-boss-attack { animation: lungeLeft 0.3s forwards; }
+    @keyframes lungeLeft { 0% { transform: translateX(0); } 50% { transform: translateX(-80px) scale(1.1); } 100% { transform: translateX(0); } }
+    .anim-hit { animation: flashRed 0.4s; }
+    @keyframes flashRed { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(3) sepia(1) hue-rotate(-50deg) saturate(5); opacity: 0.8; } }
+    .particle { position: absolute; font-size: 80px; z-index: 20; animation: popUp 0.8s forwards; pointer-events: none; }
+    @keyframes popUp { 0% { opacity: 1; transform: scale(0.5) translateY(0); } 100% { opacity: 0; transform: scale(1.5) translateY(-50px); } }
+
+</style>
+</head>
+<body>
+
+<div id="game-console">
+
+    <div id="start-screen" class="screen active">
+        <h1>決戰能源之巔<br><span style="font-size:16px; display:block; margin-top:15px; color:#f1c40f;">招式對決・極限挑戰</span></h1>
+        
+        <p style="margin-bottom:20px; font-size:16px; color:#aaa;">請選擇你的拍檔：</p>
+        <div class="hero-select">
+            <div class="hero-card" onclick="selectHero(0)">
+                <img src="https://play.pokemonshowdown.com/sprites/gen5ani/pikachu.gif" class="hero-img">
+                <p>比卡超</p>
+            </div>
+            <div class="hero-card" onclick="selectHero(1)">
+                <img src="https://play.pokemonshowdown.com/sprites/gen5ani/charizard.gif" class="hero-img">
+                <p>噴火龍</p>
+            </div>
+            <div class="hero-card" onclick="selectHero(2)">
+                <img src="https://play.pokemonshowdown.com/sprites/xyani/greninja.gif" class="hero-img">
+                <p>甲賀忍蛙</p>
+            </div>
+        </div>
+        <button id="btn-start" class="btn-main" disabled onclick="startGame()">開始挑戰</button>
+        <p style="font-size:14px; margin-top:20px; color:#aaa;">規則：答對問題後選擇招式攻擊！</p>
+    </div>
+
+    <div id="battle-screen" class="screen">
+        <div class="top-hud">
+            <div class="timer-box">時間: <span id="global-timer">300</span>s</div>
+            <div class="timer-box" style="background:rgba(200,0,0,0.6)">Boss: <span id="boss-hp-text">2000</span></div>
+        </div>
+        
+        <div class="q-timer-bar-container">
+            <div id="q-timer-bar" class="q-timer-bar"></div>
+        </div>
+
+        <div class="battle-field">
+            <div class="boss-aura"></div>
+            <div class="sprite-container boss-pos">
+                <div class="status-panel boss-panel">
+                    <div id="boss-name">捷克羅姆</div>
+                    <div class="hp-track"><div id="boss-hp-bar" class="hp-fill"></div></div>
+                </div>
+                <img id="boss-img" class="sprite boss-sprite" src="https://play.pokemonshowdown.com/sprites/gen5ani/zekrom.gif">
+            </div>
+            <div class="sprite-container hero-pos">
+                <div class="status-panel">
+                    <div id="hero-name">Hero</div>
+                    <div class="hp-track"><div id="hero-hp-bar" class="hp-fill"></div></div>
+                    <div id="hero-hp-text" style="font-size:12px; margin-top:2px; text-align:right;">100/100</div>
+                </div>
+                <img id="hero-img" class="sprite" src="">
+            </div>
+        </div>
+
+        <div class="battle-ui">
+            <div class="dialogue-area">
+                <div id="q-counter" style="color:#f39c12; margin-bottom:10px; font-size:16px;">Round 1/20</div>
+                <div id="dialogue-text">戰鬥開始！</div>
+            </div>
+            <div class="choices-area" id="choices-div"></div>
+        </div>
+    </div>
+
+    <div id="end-screen" class="screen">
+        <h1 id="end-title"></h1>
+        <div id="end-grade" class="grade-big"></div>
+        <div id="end-content" style="text-align:center; margin-bottom:30px;"></div>
+        </div>
+
+</div>
+
+<script>
+    // === 遊戲資料 (新增 moves 屬性) ===
+    const HEROES = [
+        { 
+            name: "比卡超", 
+            img: "https://play.pokemonshowdown.com/sprites/gen5ani/pikachu.gif",
+            moves: [
+                { name: "十萬伏特", type: "electric" },
+                { name: "鐵尾", type: "metal" },
+                { name: "電光一閃", type: "wind" }
+            ]
+        },
+        { 
+            name: "噴火龍", 
+            img: "https://play.pokemonshowdown.com/sprites/gen5ani/charizard.gif",
+            moves: [
+                { name: "噴射火焰", type: "fire" },
+                { name: "龍爪", type: "dragon" },
+                { name: "空氣斬", type: "wind" }
+            ]
+        },
+        { 
+            name: "甲賀忍蛙", 
+            img: "https://play.pokemonshowdown.com/sprites/xyani/greninja.gif",
+            moves: [
+                { name: "飛水手裡劍", type: "water" },
+                { name: "暗襲要害", type: "dark" },
+                { name: "燕返", type: "wind" }
+            ]
+        }
+    ];
+
+    const FULL_QUESTIONS = [
+        { q: "多士爐的主要功能是甚麼？", a: ["發熱", "發光", "發聲", "產生動力"], correct: 0 },
+        { q: "風扇的主要功能是甚麼？", a: ["產生動力", "發熱", "發光", "發聲"], correct: 0 },
+        { q: "收音機的主要功能是？", a: ["發聲", "發熱", "發光", "產生動力"], correct: 0 },
+        { q: "電燈的主要功能是甚麼？", a: ["發光", "發熱", "動力", "發聲"], correct: 0 },
+        { q: "電燈泡發光時會變熱，這是電的甚麼效應？", a: ["熱效應", "磁效應", "化學效應", "聲音效應"], correct: 0 },
+        { q: "電熨斗把衣服燙平，利用了電的甚麼效應？", a: ["熱效應", "磁效應", "光效應", "化學效應"], correct: 0 },
+        { q: "電磁鐵能吸起鐵釘，這是電的甚麼效應？", a: ["磁效應", "熱效應", "光效應", "動力效應"], correct: 0 },
+        { q: "電動機 (馬達) 利用甚麼效應產生動力？", a: ["磁效應", "熱效應", "光效應", "化學效應"], correct: 0 },
+        { q: "LED 燈主要應用電的甚麼效應？", a: ["光效應", "磁效應", "化學效應", "動力效應"], correct: 0 },
+        { q: "哪一級能源標籤最慳電？", a: ["1級 (綠色)", "3級 (黃色)", "5級 (紅色)", "10級"], correct: 0 },
+        { q: "哪一級能源標籤最耗電？", a: ["5級", "1級", "2級", "3級"], correct: 0 },
+        { q: "濕手觸摸電制有甚麼危險？", a: ["觸電", "停電", "沒危險", "省電"], correct: 0 },
+        { q: "若發現電線外皮破損，應該？", a: ["立即停用並更換", "用膠紙貼", "用水洗", "繼續使用"], correct: 0 },
+        { q: "一個插座上連接太多電器會導致？", a: ["過熱危險", "更慳電", "電器運作更快", "沒有影響"], correct: 0 },
+        { q: "鉛筆芯裡面的「石墨」是導電體嗎？", a: ["是，石墨能導電", "否，它是絕緣體", "只有加熱才導電", "不確定"], correct: 0 },
+        { q: "以下哪一種物質是「導電體」？", a: ["銅線", "塑膠尺", "木筷子", "玻璃杯"], correct: 0 },
+        { q: "以下哪一種物質是「絕緣體」？", a: ["橡膠手套", "鐵釘", "鋁罐", "金戒指"], correct: 0 },
+        { q: "為甚麼電線外層通常包著塑膠？", a: ["防止觸電(絕緣)", "為了美觀", "增加重量", "讓電跑得快"], correct: 0 },
+        { q: "人體是導電體嗎？", a: ["是，人體可導電", "否，人體絕緣", "只有頭髮導電", "不確定"], correct: 0 },
+        { q: "純水 (不含雜質) 的導電能力比鹽水？", a: ["弱 (不易導電)", "強", "一樣", "不確定"], correct: 0 }
+    ];
+
+    // === 遊戲變數 ===
+    let selectedHero = null;
+    let heroHP = 100;
+    let bossHP = 2000;
+    let maxBossHP = 2000;
+    let qList = [];
+    let qIndex = 0;
+    let correctCount = 0;
+    
+    // 計時器變數
+    let globalTimer = 300;
+    let questionTimer = 20;
+    let timerInterval = null;
+    let isPaused = false;
+
+    // === 遊戲流程 ===
+
+    function selectHero(index) {
+        selectedHero = HEROES[index];
+        document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('.hero-card')[index].classList.add('selected');
+        document.getElementById('btn-start').disabled = false;
+    }
+
+    function startGame() {
+        if (!selectedHero) return;
+        heroHP = 100;
+        bossHP = 2000;
+        qIndex = 0;
+        correctCount = 0;
+        globalTimer = 300;
+        isPaused = false;
+        
+        qList = [...FULL_QUESTIONS].sort(() => Math.random() - 0.5);
+
+        document.getElementById('hero-img').src = selectedHero.img;
+        document.getElementById('hero-name').innerText = selectedHero.name;
+        document.getElementById('global-timer').innerText = globalTimer;
+        document.getElementById('boss-hp-text').innerText = bossHP;
+        updateHP('hero', 100);
+        updateHP('boss', 100);
+
+        document.getElementById('start-screen').classList.remove('active');
+        document.getElementById('battle-screen').classList.add('active');
+
+        startTimers();
+        typeText(`挑戰開始！限時 5 分鐘！\n目標：擊敗捷克羅姆！`, () => {
+            setTimeout(showQuestion, 1500);
+        });
+    }
+
+    function startTimers() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (isPaused) return;
+
+            globalTimer--;
+            document.getElementById('global-timer').innerText = globalTimer;
+            if (globalTimer <= 0) {
+                endGame(false, "時間到！任務失敗！");
+                return;
+            }
+
+            if (document.querySelectorAll('.choice-btn').length > 0) {
+                questionTimer--;
+                updateQTimerBar();
+                if (questionTimer <= 0) {
+                    handleAnswer(false, true); // 超時
+                }
+            }
+        }, 1000);
+    }
+
+    function updateQTimerBar() {
+        const bar = document.getElementById('q-timer-bar');
+        const pct = (questionTimer / 20) * 100;
+        bar.style.width = pct + "%";
+        if (questionTimer <= 5) bar.style.background = "#e74c3c";
+        else bar.style.background = "#3498db";
+    }
+
+    function showQuestion() {
+        if (heroHP <= 0 || globalTimer <= 0) return endGame(false);
+        if (qIndex >= 20) return endGame(true);
+
+        isPaused = false; // 恢復計時
+        questionTimer = 20; // 重置單題時間
+        updateQTimerBar();
+
+        const q = qList[qIndex];
+        document.getElementById('q-counter').innerText = `Round ${qIndex + 1}/20`;
+        document.getElementById('dialogue-text').innerHTML = q.q;
+
+        const choicesDiv = document.getElementById('choices-div');
+        choicesDiv.innerHTML = '';
+
+        let idxs = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+        idxs.forEach(i => {
+            let btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = q.a[i];
+            btn.onclick = () => handleAnswer(i === q.correct, false);
+            choicesDiv.appendChild(btn);
+        });
+    }
+
+    // 處理回答
+    function handleAnswer(isCorrect, isTimeout) {
+        const choicesDiv = document.getElementById('choices-div');
+        
+        if (isTimeout) {
+            isPaused = true;
+            choicesDiv.innerHTML = "";
+            document.getElementById('dialogue-text').innerText = "時間到！無法閃避！";
+            enemyAttackSequence();
+        } else {
+            if (isCorrect) {
+                // 答對了！進入招式選擇
+                isPaused = true; // 暫停計時讓學生選招式
+                correctCount++;
+                showAttackMenu();
+            } else {
+                // 答錯了
+                isPaused = true;
+                const btns = document.querySelectorAll('.choice-btn');
+                btns.forEach(b => b.disabled = true);
+                document.getElementById('dialogue-text').innerText = "答錯了... 受到反擊！";
+                enemyAttackSequence();
+            }
+        }
+    }
+
+    // 顯示招式選單 (答對後)
+    function showAttackMenu() {
+        const choicesDiv = document.getElementById('choices-div');
+        choicesDiv.innerHTML = ''; // 清空選項
+        document.getElementById('dialogue-text').innerText = "答對了！請選擇攻擊招式：";
+
+        selectedHero.moves.forEach(move => {
+            let btn = document.createElement('button');
+            btn.className = 'choice-btn move-btn'; // 加上特別樣式
+            btn.innerText = move.name;
+            btn.onclick = () => executePlayerAttack(move);
+            choicesDiv.appendChild(btn);
+        });
+    }
+
+    // 執行玩家攻擊
+    function executePlayerAttack(move) {
+        // 鎖定按鈕
+        const btns = document.querySelectorAll('.choice-btn');
+        btns.forEach(b => b.disabled = true);
+
+        document.getElementById('dialogue-text').innerText = `${selectedHero.name} 使用了 ${move.name}！`;
+        animateAction('hero', 'attack');
+        
+        setTimeout(() => {
+            bossHP -= 100;
+            document.getElementById('boss-hp-text').innerText = Math.max(0, bossHP);
+            updateHP('boss', (bossHP / maxBossHP) * 100);
+            animateAction('boss', 'hit');
+            createParticle(move.type); // 使用招式屬性的特效
+
+            if (bossHP <= 0) {
+                setTimeout(() => endGame(true), 1000);
+            } else {
+                setTimeout(() => {
+                    qIndex++;
+                    showQuestion();
+                }, 1500);
+            }
+        }, 500);
+    }
+
+    // 敵人攻擊流程 (答錯/超時)
+    function enemyAttackSequence() {
+        animateAction('boss', 'attack');
+        setTimeout(() => {
+            heroHP -= 20;
+            updateHP('hero', heroHP);
+            animateAction('hero', 'hit');
+
+            if (heroHP <= 0) {
+                setTimeout(() => endGame(false), 1000);
+            } else {
+                setTimeout(() => {
+                    qIndex++;
+                    showQuestion();
+                }, 1500);
+            }
+        }, 500);
+    }
+
+    // === 結算系統 ===
+    function endGame(completed, reason) {
+        clearInterval(timerInterval);
+        document.getElementById('battle-screen').classList.remove('active');
+        document.getElementById('end-screen').classList.add('active');
+
+        const title = document.getElementById('end-title');
+        const gradeDiv = document.getElementById('end-grade');
+        const content = document.getElementById('end-content');
+
+        let grade = 'C';
+        let gradeClass = 'grade-C';
+        if (correctCount >= 19) { grade = 'S'; gradeClass = 'grade-S'; }
+        else if (correctCount >= 16) { grade = 'A'; gradeClass = 'grade-A'; }
+        else if (correctCount >= 10) { grade = 'B'; gradeClass = 'grade-B'; }
+
+        if (bossHP <= 0) {
+            title.innerText = "BOSS 擊破！";
+            title.style.color = "#f1c40f";
+        } else if (completed) {
+            title.innerText = "戰鬥結束";
+            title.style.color = "#fff";
+        } else {
+            title.innerText = "挑戰失敗...";
+            title.style.color = "#e74c3c";
+            if(reason) title.innerText = reason;
+        }
+
+        gradeDiv.innerText = grade;
+        gradeDiv.className = `grade-big ${gradeClass}`;
+        content.innerHTML = `
+            答對題數：<span style="color:${grade === 'C' ? 'red' : 'lightgreen'}">${correctCount} / 20</span><br><br>
+            剩餘時間：${globalTimer} 秒<br>
+            Boss 剩餘 HP：${Math.max(0, bossHP)}
+        `;
+    }
+
+    function updateHP(target, percent) {
+        percent = Math.max(0, percent);
+        const bar = document.getElementById(`${target}-hp-bar`);
+        bar.style.width = percent + '%';
+        if(target === 'hero') document.getElementById('hero-hp-text').innerText = `${Math.ceil(percent)}/100`;
+        if (percent > 50) bar.style.background = 'var(--hp-green)';
+        else if (percent > 20) bar.style.background = 'var(--hp-yellow)';
+        else bar.style.background = 'var(--hp-red)';
+    }
+
+    function animateAction(target, action) {
+        const img = document.getElementById(`${target}-img`);
+        let animClass = '';
+        if (action === 'attack') animClass = target === 'hero' ? 'anim-hero-attack' : 'anim-boss-attack';
+        else if (action === 'hit') animClass = 'anim-hit';
+        
+        img.classList.remove(animClass);
+        void img.offsetWidth; 
+        img.classList.add(animClass);
+    }
+
+    function createParticle(type) {
+        const map = { 
+            fire:'🔥', water:'💧', electric:'⚡', grass:'🌿', wind:'🌪️', light:'✨', music:'🎵',
+            metal: '⚙️', dark: '🌑', dragon: '🐲'
+        };
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.innerText = map[type] || '💥';
+        document.querySelector('.boss-pos').appendChild(p);
+        setTimeout(() => p.remove(), 800);
+    }
+
+    function typeText(txt, callback) {
+        const el = document.getElementById('dialogue-text');
+        el.innerText = "";
+        let i = 0;
+        let t = setInterval(() => {
+            el.innerText += txt.charAt(i);
+            i++;
+            if (i >= txt.length) {
+                clearInterval(t);
+                if (callback) callback();
+            }
+        }, 30);
+    }
+</script>
+
+</body>
+</html>
