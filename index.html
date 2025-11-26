@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>常識科 RPG：能源守護者 Z (最終版)</title>
+<title>常識科 RPG：能源守護者 Z (伊貝參戰版)</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
     /* === 核心樣式 === */
@@ -223,8 +223,8 @@
                 <p>噴火龍</p>
             </div>
             <div class="hero-card" onclick="selectHero(2)">
-                <img src="https://play.pokemonshowdown.com/sprites/xyani/greninja.gif" class="hero-img">
-                <p>甲賀忍蛙</p>
+                <img src="https://play.pokemonshowdown.com/sprites/gen5ani/eevee.gif" class="hero-img">
+                <p>伊貝</p>
             </div>
         </div>
         <button id="btn-start" class="btn-main" disabled onclick="startGame()">開始挑戰</button>
@@ -273,12 +273,12 @@
         <h1 id="end-title"></h1>
         <div id="end-grade" class="grade-big"></div>
         <div id="end-content" style="text-align:center; margin-bottom:30px;"></div>
-        </div>
+    </div>
 
 </div>
 
 <script>
-    // === 遊戲資料 (新增 moves 屬性) ===
+    // === 遊戲資料 (修改了第三個角色為伊貝) ===
     const HEROES = [
         { 
             name: "比卡超", 
@@ -299,12 +299,12 @@
             ]
         },
         { 
-            name: "甲賀忍蛙", 
-            img: "https://play.pokemonshowdown.com/sprites/xyani/greninja.gif",
+            name: "伊貝", 
+            img: "https://play.pokemonshowdown.com/sprites/gen5ani/eevee.gif",
             moves: [
-                { name: "飛水手裡劍", type: "water" },
-                { name: "暗襲要害", type: "dark" },
-                { name: "燕返", type: "wind" }
+                { name: "撞擊", type: "metal" },
+                { name: "電光一閃", type: "wind" },
+                { name: "高速星星", type: "light" }
             ]
         }
     ];
