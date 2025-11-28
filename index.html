@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港交通大冒險：最終試煉 (難度升級版)</title>
+    <title>香港交通大冒險：最終試煉 (修正版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-storm: url('https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?q=80&w=1920&auto=format&fit=crop');
+            /* 使用漸層色代替圖片，確保學校網絡也能顯示 */
+            --bg-storm: linear-gradient(135deg, #2c3e50, #000000);
             --hp-green: #4caf50;
             --hp-yellow: #ffeb3b;
             --hp-red: #f44336;
@@ -346,7 +347,7 @@
 </div>
 
 <script>
-    // --- DATA: 12 QUESTIONS (UPDATED OPTIONS) ---
+    // --- DATA ---
     const rawQuestions = [
         { q: "哪一種交通工具行駛時會發出「叮叮」的聲音？", options: ["電車", "小巴", "地鐵", "渡輪"], ans: 0 },
         { q: "新界區的的士是什麼顏色的？", options: ["紅色", "藍色", "綠色", "黃色"], ans: 2 },
@@ -354,7 +355,6 @@
         { q: "如果要從尖沙咀過海去中環，最便宜又可看風景的是？", options: ["港鐵", "天星小輪", "直升機", "的士"], ans: 1 },
         { q: "哪種交通工具主要在地下行駛，速度最快？", options: ["巴士", "港鐵", "小巴", "纜車"], ans: 1 },
         { q: "紅磡海底隧道連接哪兩個地方？", options: ["大嶼山和九龍", "香港島和九龍", "新界和深圳", "長洲和梅窩"], ans: 1 },
-        // UPDATED QUESTION: Harder options for Minibus seats
         { q: "綠色專線小巴通常有多少個座位？", options: ["14座", "18座", "19座", "21座"], ans: 2 }, 
         { q: "山頂纜車最主要帶遊客去哪裡？", options: ["迪士尼", "太平山頂", "海洋公園", "機場"], ans: 1 },
         { q: "主要行駛於屯門和元朗區的路面有軌交通是？", options: ["輕鐵", "電車", "纜車", "磁浮列車"], ans: 0 },
@@ -363,20 +363,17 @@
         { q: "香港國際機場位於哪一個島嶼？", options: ["香港島", "長洲", "南丫島", "赤鱲角"], ans: 3 }
     ];
 
-    // --- STATE ---
-    let questions = []; // To be shuffled
+    let questions = []; 
     let currentQIndex = 0;
     const TOTAL_QUESTIONS = 12;
 
     let playerStats = { name: "", imgBack: "", hp: 100, maxHp: 100 };
     let enemyStats = { name: "列空座", imgFront: "", hp: 12, maxHp: 12 };
     
-    // Timer
     let timerInterval;
-    const MAX_TIME = 300; // 5 Minutes
+    const MAX_TIME = 300; 
     let remainingTime = MAX_TIME;
 
-    // DOM
     const screens = {
         start: document.getElementById('start-screen'),
         select: document.getElementById('selection-screen'),
@@ -385,8 +382,6 @@
     };
     const timerDisplay = document.getElementById('timer-display');
     const progressDisplay = document.getElementById('progress-display');
-
-    // --- FUNCTIONS ---
 
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -411,6 +406,7 @@
             };
         } catch (e) {
             console.error("API Error", e);
+            // Fallback images if fetch fails
             return { imgFront: "", imgBack: "" };
         }
     }
@@ -418,11 +414,9 @@
     async function startGame() {
         document.getElementById('loading').style.display = 'flex';
         
-        // Shuffle Questions
         questions = shuffleArray([...rawQuestions]);
         currentQIndex = 0;
 
-        // Charizard (6), Bulbasaur (1), Blastoise (9)
         const coolStarters = [6, 1, 9]; 
         const starterNames = ["噴火龍", "奇妙種子", "水箭龜"];
         const container = document.getElementById('selection-container');
@@ -447,7 +441,7 @@
         
         document.getElementById('loading').style.display = 'flex';
         try {
-            const bossData = await fetchPokemonData(384); // Rayquaza
+            const bossData = await fetchPokemonData(384); 
             enemyStats = { ...enemyStats, imgFront: bossData.imgFront, hp: 12 };
             initBattle();
         } catch(e) { console.error(e); }
@@ -456,7 +450,7 @@
     function initBattle() {
         document.getElementById('loading').style.display = 'none';
         showScreen('battle');
-        document.getElementById('battle-screen').style.backgroundImage = 'var(--bg-storm)';
+        document.getElementById('battle-screen').style.background = 'var(--bg-storm)'; // Use variable
 
         document.getElementById('player-img').src = playerStats.imgBack;
         document.getElementById('enemy-img').src = enemyStats.imgFront;
@@ -492,17 +486,14 @@
     }
 
     function updateUI() {
-        // Update Progress
         progressDisplay.innerText = `進度: ${Math.min(currentQIndex + 1, TOTAL_QUESTIONS)} / ${TOTAL_QUESTIONS}`;
 
-        // Player HP
         const pPct = (playerStats.hp / playerStats.maxHp) * 100;
         const pBar = document.getElementById('player-hp-bar');
         pBar.style.width = `${Math.max(0, pPct)}%`;
         pBar.style.backgroundColor = pPct > 50 ? 'var(--hp-green)' : (pPct > 20 ? 'var(--hp-yellow)' : 'var(--hp-red)');
         document.getElementById('player-hp-text').innerText = `${Math.max(0, playerStats.hp)}%`;
 
-        // Enemy HP (Based on Remaining Questions)
         const ePct = (enemyStats.hp / enemyStats.maxHp) * 100;
         const eBar = document.getElementById('enemy-hp-bar');
         eBar.style.width = `${Math.max(0, ePct)}%`;
@@ -512,11 +503,7 @@
 
     function nextTurn() {
         if (playerStats.hp <= 0) return gameOver(false, "dead");
-        
-        // WIN CONDITION: Finished all questions
-        if (currentQIndex >= TOTAL_QUESTIONS) {
-            return gameOver(true);
-        }
+        if (currentQIndex >= TOTAL_QUESTIONS) return gameOver(true);
 
         const q = questions[currentQIndex];
         document.getElementById('text-display').innerText = q.q;
@@ -534,7 +521,7 @@
 
     function handleAns(isCorrect) {
         const opts = document.getElementById('options-container');
-        opts.innerHTML = ''; // Lock buttons
+        opts.innerHTML = ''; 
         const txt = document.getElementById('text-display');
 
         if (isCorrect) {
@@ -543,10 +530,10 @@
             createParticle();
             
             setTimeout(() => {
-                enemyStats.hp -= 1; // 1 Damage per question
+                enemyStats.hp -= 1; 
                 playAnim('enemy', 'damaged');
                 
-                currentQIndex++; // Move to next question
+                currentQIndex++; 
                 updateUI();
 
                 setTimeout(() => {
@@ -555,23 +542,31 @@
             }, 500);
 
         } else {
+            // --- FIX START: Logic for wrong answer ---
             txt.innerText = "答錯了... 受到反擊！";
             playAnim('enemy', 'attacking');
             
             setTimeout(() => {
-                playerStats.hp -= 25; // 4 Mistakes = Game Over
+                playerStats.hp -= 25; 
                 playAnim('player', 'damaged');
                 
                 updateUI();
                 if (playerStats.hp > 0) {
                     setTimeout(() => {
-                        txt.innerText = "再試一次！";
-                        renderSameOptions(); 
+                        // 1. Tell player to try again
+                        txt.innerText = "血量減少！請再試一次！";
+                        
+                        // 2. After 1 second, SHOW THE QUESTION TEXT AGAIN
+                        setTimeout(() => {
+                            txt.innerText = questions[currentQIndex].q; // Restore question text
+                            renderSameOptions(); 
+                        }, 1000);
                     }, 1000);
                 } else {
-                    setTimeout(nextTurn, 1000); // Will trigger game over
+                    setTimeout(nextTurn, 1000); 
                 }
             }, 500);
+            // --- FIX END ---
         }
     }
 
@@ -621,16 +616,14 @@
             const s = timeUsed % 60;
             timeText.innerText = `${m}分 ${s}秒`;
             
-            // Show Score (Score is essentially the currentQIndex)
             scoreDisplay.innerText = `答對題數: ${currentQIndex} / ${TOTAL_QUESTIONS}`;
 
             if (win) {
                 title.innerText = "任務完成！";
                 title.style.color = "#f1c40f";
                 
-                // Grading Logic based on 300s (5 mins)
                 gradeText.className = "grade-text";
-                if (remainingTime >= 150) { // > 2.5 mins left
+                if (remainingTime >= 150) { 
                     gradeText.innerText = "S";
                     gradeText.classList.add("grade-S");
                     comment.innerText = "無敵的交通大師！";
