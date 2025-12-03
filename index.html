@@ -414,6 +414,7 @@
             <p id="go-msg"></p>
             <p>金幣分數: <span id="final-coins">0</span></p>
             <p>寶箱收集: <span id="final-chests">0</span></p>
+            <p id="clear-time-container" style="display:none">通關時間: <span id="final-time"></span></p>
             <!-- 修正：改用 JS 重置而非重新整理網頁 -->
             <button class="restart-btn" onclick="resetGame()">再玩一次</button>
         </div>
@@ -1193,6 +1194,8 @@
             const goScreen = document.getElementById('game-over');
             const goTitle = document.getElementById('go-title');
             const goMsg = document.getElementById('go-msg');
+            const clearTimeContainer = document.getElementById('clear-time-container');
+            const finalTimeEl = document.getElementById('final-time');
             
             goScreen.style.display = 'flex';
             document.getElementById('final-coins').innerText = coinScore;
@@ -1202,10 +1205,18 @@
                 goScreen.style.background = 'rgba(92, 148, 252, 0.95)';
                 goTitle.innerText = '🎉 抵達終點！';
                 goMsg.innerText = '恭喜你完成了這趟人體探險！';
+                
+                // Calculate Time
+                const elapsedTime = 300 - gameTime;
+                const m = Math.floor(elapsedTime / 60);
+                const s = elapsedTime % 60;
+                finalTimeEl.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                clearTimeContainer.style.display = 'block';
             } else {
                 goScreen.style.background = 'rgba(44, 62, 80, 0.95)';
                 goTitle.innerText = '💔 挑戰失敗';
                 goMsg.innerText = reason ? reason + ' 休息一下再試一次！' : '沒關係，休息一下再試一次！';
+                clearTimeContainer.style.display = 'none';
             }
         }
 
