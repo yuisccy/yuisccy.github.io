@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>常識科進階：生活產品大搜查 (更新版)</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 { color: #2c3e50; }
+        p { color: #555; }
+
+        /* 頁面切換系統 */
+        .screen { display: none; }
+        .active { display: block; animation: slideUp 0.5s ease-out; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 選單按鈕 */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            margin: 40px auto;
+        }
+
+        .animal-card-btn {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, border 0.3s;
+            border: 5px solid transparent;
+        }
+
+        .animal-card-btn:hover { transform: translateY(-10px); }
+        
+        /* 動物主題色 */
+        .btn-chicken:hover { border-color: #FFC107; }
+        .btn-cow:hover { border-color: #795548; }
+        .btn-sheep:hover { border-color: #90A4AE; }
+
+        .animal-icon { font-size: 80px; margin-bottom: 15px; display: block; }
+        .animal-title { font-size: 1.5em; font-weight: bold; color: #333; }
+        .animal-desc { color: #777; font-size: 0.9em; margin-top: 5px; }
+
+        /* 遊戲區域 */
+        .game-header {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .back-btn {
+            background: #607d8b; color: white; border: none;
+            padding: 8px 15px; border-radius: 8px; cursor: pointer;
+        }
+
+        .target-hint { font-size: 1.2em; font-weight: bold; color: #d35400; }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .item-card {
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 15px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .item-card:hover { border-color: #3498db; transform: scale(1.03); }
+        .item-emoji { font-size: 50px; display: block; margin-bottom: 5px; }
+        .item-text { font-weight: bold; color: #444; }
+
+        /* 答對答錯樣式 */
+        .correct { background-color: #d4edda; border-color: #28a745; opacity: 0.7; pointer-events: none; }
+        .wrong { background-color: #f8d7da; border-color: #dc3545; animation: shake 0.4s; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* 彈窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: none; z-index: 100;
+        }
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; border-radius: 20px;
+            width: 80%; max-width: 400px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; z-index: 101;
+        }
+        .modal h2 { margin-top: 0; }
+        .modal-btn {
+            margin-top: 15px; padding: 10px 25px; background: #3498db;
+            color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 1.1em;
+        }
+        .difficulty-tag {
+            background: #f1c40f; color: #333; font-size: 0.8em; padding: 3px 8px;
+            border-radius: 5px; font-weight: bold; margin-bottom: 10px; display: inline-block;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="menuScreen" class="screen active">
+        <h1>🔍 生活產品大搜查 (進階版)</h1>
+        <p>請選擇一種動物，找出所有由牠提供的<b>原材料或加工製品</b>！<br>小心！有些東西看起來很像，但其實不是喔！</p>
+        
+        <div class="menu-grid">
+            <div class="animal-card-btn btn-chicken" onclick="startGame('chicken')">
+                <span class="animal-icon">🐔</span>
+                <div class="animal-title">雞 (Chicken)</div>
+                <div class="animal-desc">尋找蛋製品、肉類與羽毛製品</div>
+            </div>
+            <div class="animal-card-btn btn-cow" onclick="startGame('cow')">
+                <span class="animal-icon">🐮</span>
+                <div class="animal-title">牛 (Cow)</div>
+                <div class="animal-desc">尋找奶製品、皮革與肉類</div>
+            </div>
+            <div class="animal-card-btn btn-sheep" onclick="startGame('sheep')">
+                <span class="animal-icon">🐑</span>
+                <div class="animal-title">羊 (Sheep)</div>
+                <div class="animal-desc">尋找羊毛製品與肉類</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="screen">
+        <div class="game-header">
+            <button class="back-btn" onclick="goBack()">↩ 返回</button>
+            <div class="target-hint">請找出所有屬於 <span id="targetName" style="text-decoration: underline;"></span> 的產品</div>
+            <div>進度: <span id="scoreDisplay">0</span> / <span id="totalDisplay">0</span></div>
+        </div>
+
+        <div class="game-grid" id="grid"></div>
+    </div>
+
+    <div class="modal-overlay" id="overlay"></div>
+    <div class="modal" id="modal">
+        <div id="modalIcon" style="font-size: 60px;"></div>
+        <h2 id="modalTitle"></h2>
+        <p id="modalDesc"></p>
+        <button class="modal-btn" onclick="closeModal()">明白了</button>
+    </div>
+
+    <script>
+        // --- 進階題庫 (已更新) ---
+        // type: 正確歸屬
+        // tricky: 是否為陷阱題 (用於顯示特殊提示)
+        const database = [
+            // 雞的相關 (含加工品) - 已替換羽毛球為雞毛掃
+            { name: "沙律醬 (Mayo)", icon: "🥣", type: "chicken", desc: "沙律醬的主要材料是<b>雞蛋黃</b>和油。" },
+            { name: "雞精", icon: "🥃", type: "chicken", desc: "這是從雞肉提煉出來的營養補充品。" },
+            { name: "雞毛掃", icon: "🧹", type: "chicken", desc: "雞的羽毛可以用來製作清潔家具的<b>雞毛掃</b>。" },
+            { name: "蛋撻", icon: "🥧", type: "chicken", desc: "蛋撻中間黃色的部分是用<b>雞蛋</b>做的。" },
+            { name: "親子丼", icon: "🍱", type: "chicken", desc: "這道菜同時使用了<b>雞肉</b>和<b>雞蛋</b>。" },
+
+            // 牛的相關 (含加工品與皮革)
+            { name: "芝士 (Cheese)", icon: "🧀", type: "cow", desc: "芝士是由<b>牛奶</b>發酵加工而成的。" },
+            { name: "真皮足球", icon: "⚽", type: "cow", desc: "高品質的足球外層是用<b>牛皮</b>做的。" },
+            { name: "乳酪 (Yoghurt)", icon: "🥣", type: "cow", desc: "乳酪是用<b>牛奶</b>加入益生菌製成的。" },
+            { name: "牛油 (Butter)", icon: "🧈", type: "cow", desc: "牛油是從<b>牛奶</b>脂肪中提煉出來的。" },
+            { name: "皮帶", icon: "👖", type: "cow", desc: "堅韌的皮帶通常是用<b>牛皮</b>製成的。" },
+            { name: "啫喱 (Gelatin)", icon: "🍮", type: "cow", desc: "很多軟糖裡的明膠是從<b>牛或豬的骨頭/皮</b>提煉的！(這是冷知識！)" },
+
+            // 羊的相關
+            { name: "羊毛手套", icon: "🧤", type: "sheep", desc: "用綿羊毛織成，非常保暖。" },
+            { name: "羊架", icon: "🍖", type: "sheep", desc: "這是羊的肉，是食物來源。" },
+            { name: "羊毛氈公仔", icon: "🧸", type: "sheep", desc: "這是利用特殊的針將<b>羊毛</b>戳刺成型的工藝品。" },
+
+            // 陷阱題 (植物或人造)
+            { name: "豆漿", icon: "🥛", type: "plant", desc: "<b>陷阱！</b>豆漿是用<b>黃豆 (植物)</b> 做的，不是牛喔！" },
+            { name: "棉質T恤", icon: "👕", type: "plant", desc: "<b>陷阱！</b>棉花是生長在田裡的<b>植物</b>，不是動物毛。" },
+            { name: "人造皮手袋", icon: "👜", type: "synthetic", desc: "<b>陷阱！</b>這是塑膠做成的「仿皮」，沒有用到動物皮膚。" },
+            { name: "豆腐", icon: "🧊", type: "plant", desc: "<b>陷阱！</b>豆腐是黃豆做的，雖然有蛋白質，但不是肉。" },
+            { name: "鴨絨褸", icon: "duck", type: "duck", desc: "<b>陷阱！</b>雖然也是家禽，但通常是指鴨或鵝的毛，不是雞喔。" }
+        ];
+
+        let currentTarget = "";
+        let foundCount = 0;
+        let totalCount = 0;
+
+        function startGame(animal) {
+            currentTarget = animal;
+            foundCount = 0;
+            
+            // 介面設定
+            const nameMap = { 'chicken': '🐔 雞', 'cow': '🐮 牛', 'sheep': '🐑 羊' };
+            document.getElementById('targetName').innerText = nameMap[animal];
+            document.getElementById('menuScreen').classList.remove('active');
+            document.getElementById('gameScreen').classList.add('active');
+
+            // 1. 篩選出「正確答案」
+            const correctItems = database.filter(item => item.type === animal);
+            totalCount = correctItems.length;
+            document.getElementById('totalDisplay').innerText = totalCount;
+            document.getElementById('scoreDisplay').innerText = 0;
+
+            // 2. 篩選出「陷阱答案」 (從其他類別隨機選幾個)
+            const otherItems = database.filter(item => item.type !== animal).sort(() => 0.5 - Math.random()).slice(0, 6); // 取6個干擾項
+
+            // 3. 混合並洗牌
+            const gameItems = [...correctItems, ...otherItems].sort(() => 0.5 - Math.random());
+
+            // 4. 生成卡片
+            const grid = document.getElementById('grid');
+            grid.innerHTML = "";
+            gameItems.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <span class="item-emoji">${item.icon}</span>
+                    <div class="item-text">${item.name}</div>
+                `;
+                card.onclick = () => checkItem(card, item);
+                grid.appendChild(card);
+            });
+        }
+
+        function checkItem(card, item) {
+            if (card.classList.contains('correct')) return;
+
+            if (item.type === currentTarget) {
+                // 答對
+                card.classList.add('correct');
+                foundCount++;
+                document.getElementById('scoreDisplay').innerText = foundCount;
+                showModal("✅ 答對了！", item.desc, "🎉");
+
+                if (foundCount === totalCount) {
+                    setTimeout(() => showModal("🏆 挑戰成功！", "你找出了所有隱藏的產品！你對原材料很熟悉喔！", "🌟"), 1000);
+                }
+            } else {
+                // 答錯
+                card.classList.add('wrong');
+                setTimeout(() => card.classList.remove('wrong'), 500);
+                
+                // 錯誤提示邏輯
+                let title = "❌ 不是喔";
+                if(item.type === 'plant' || item.type === 'synthetic') {
+                    title = "❌ 這是陷阱！";
+                }
+                showModal(title, item.desc, "🤔");
+            }
+        }
+
+        function showModal(title, desc, icon) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerHTML = desc;
+            document.getElementById('modalIcon').innerText = icon;
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function goBack() {
+            document.getElementById('gameScreen').classList.remove('active');
+            document.getElementById('menuScreen').classList.add('active');
+        }
+
+    </script>
+</body>
+</html>
